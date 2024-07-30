@@ -44,7 +44,9 @@ NUM_CLASSES = 5
 IMG_HEIGHT = 360
 IMG_WIDTH = 640
 # Directory of model files
-ARTIFACT_DETECTION_DIR = "/data/pst900_thermal_rgb/pstnet/data/"
+# ARTIFACT_DETECTION_DIR = "/data/pst900_thermal_rgb/pstnet/data/"
+ARTIFACT_DETECTION_DIR = "/home/hee/workspace/src/pst900_thermal_rgb/pstnet/data/"
+
 # Directory which contains batch of input images
 ARGS_INFERENCE_DIR = ARTIFACT_DETECTION_DIR + "data/PST900_RGBT_Dataset/test/"
 # ==========================================================================
@@ -194,6 +196,69 @@ def main(MODEL_NAME, NUM_CHANNELS, ARGS_LOAD_WEIGHTS, ARGS_LOAD_MODEL, ARGS_SAVE
         label_save = ToPILImage()(label_color)
         label_save.save(filenameSave)
 
+
+        import matplotlib.pyplot as plt
+        from torchvision.transforms.functional import to_pil_image
+        from matplotlib.colors import ListedColormap
+        import matplotlib.patches as mpatches
+        import matplotlib.colors as mcolors
+
+
+        colors = ['black', 'red', 'green', 'yellow', 'blue']
+        class_names = ['Background', 'Fire extinguisher', 'Backpack', 'Hand drill', 'Rescue randy']
+        patches = [mpatches.Patch(color=colors[i], label=class_names[i]) for i in range(len(colors))]
+
+        cmap = ListedColormap(colors)
+
+        def overlay_mask(image, mask, title):
+            plt.imshow(to_pil_image(image))
+            plt.imshow(mask, cmap=cmap, alpha=0.5)
+            plt.axis('off')
+            plt.title(title)
+
+        def apply_color_map(mask):
+            color_mask = np.zeros((*mask.shape, 3), dtype=np.uint8)
+            for idx, color in enumerate(colors):
+                color_mask[mask == idx] = np.array(mcolors.to_rgb(color)) * 255
+            return color_mask
+
+
+        # 시각화
+        plt.figure(figsize=(20, 10))
+
+        # RGB 이미지
+        plt.subplot(2, 2, 1)
+        plt.imshow(to_pil_image(images[0][:3]))
+        plt.axis('off')
+        plt.title('RGB')
+
+        # Thermal 이미지
+        plt.subplot(2, 2, 2)
+        plt.imshow(to_pil_image(images[0][3:]))
+        plt.axis('off')
+        plt.title('Thermal')
+
+        # RGB + GT 오버레이
+        plt.subplot(2, 2, 3)
+        # overlay_mask(images[0][:3], labels[0][0].cpu(), 'Ground Truth')
+        # plt.imshow(to_pil_image(labels[0][0].cpu().numpy().astype(np.uint8)))
+        plt.imshow(to_pil_image(apply_color_map(labels[0][0].cpu())))
+        plt.axis('off')
+        plt.title('Ground Truth')
+
+        # RGB + Pred 오버레이
+        plt.subplot(2, 2, 4)
+        # overlay_mask(images[0][:3], label.cpu(), 'Predicted')
+        # plt.imshow(to_pil_image(label.cpu()))
+        plt.imshow(to_pil_image(apply_color_map(label.cpu())))
+        plt.axis('off')
+        plt.title('Predicted')
+
+        plt.legend(handles=patches, loc='upper right', bbox_to_anchor=(0, 1))
+
+        plt.savefig(filenameSave, bbox_inches='tight')
+        # plt.show()
+
         # Print inference time if required
         if display_time: 
             print("Val image: {} | Latency: {} ms".format(step,(inf_time_out - inf_time_in)*1000.0))
@@ -216,7 +281,7 @@ def model_inference_loader(MODEL_NAME,NUM_CHANNELS):
     """    
     ARGS_LOAD_WEIGHTS = "weights/" + MODEL_NAME + "/model_best.pth"
     ARGS_LOAD_MODEL = "architectures/" + MODEL_NAME + "/"
-    ARGS_SAVE_DIR = ARTIFACT_DETECTION_DIR + "/inference/" + MODEL_NAME
+    ARGS_SAVE_DIR = ARTIFACT_DETECTION_DIR + "inference/" + MODEL_NAME
     sys.path.append(ARTIFACT_DETECTION_DIR + ARGS_LOAD_MODEL)
 
     module = __import__(MODEL_NAME)
